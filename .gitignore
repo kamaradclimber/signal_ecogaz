@@ -1,2 +1,3 @@
 .*cpython-310.pyc
+custom_components/__pycache__/
 custom_components/signal_ecogaz/__pycache__/
