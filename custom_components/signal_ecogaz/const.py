@@ -1,0 +1,1 @@
+DOMAIN = "signal_ecogaz"

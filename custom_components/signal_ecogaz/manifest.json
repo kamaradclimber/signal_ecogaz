@@ -1,0 +1,14 @@
+{
+  "codeowners": ["@kamaradclimber"],
+  "requirements": [
+    "Async-OAuthlib==0.0.9"
+  ],
+  "iot_class": "cloud_polling",
+  "domain": "signal_ecogaz",
+  "documentation": "https://github.com/kamaradclimber/signal-ecogaz",
+  "issue_tracker": "https://github.com/kamaradclimber/signal-ecogaz/issues",
+  "codeowners": ["@kamaradclimber"],
+  "name": "Signal Ecogaz",
+  "config_flow": true,
+  "version": "0.1.0"
+}
