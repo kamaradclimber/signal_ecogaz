@@ -8,6 +8,7 @@
   "documentation": "https://github.com/kamaradclimber/signal-ecogaz",
   "issue_tracker": "https://github.com/kamaradclimber/signal-ecogaz/issues",
   "codeowners": ["@kamaradclimber"],
+  "integration_type": "device",
   "name": "Signal Ecogaz",
   "config_flow": true,
   "version": "0.1.0"
