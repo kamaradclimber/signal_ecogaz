@@ -93,7 +93,7 @@ class EcoGazAPICoordinator(DataUpdateCoordinator):
                 )
             _LOGGER.debug("Starting collecting data")
             async with aiohttp.ClientSession() as session:
-                async with session.get('https://odre.opendatasoft.com/api/records/1.0/search/?dataset=signal-ecogaz&q=&facet=gas_day&rows=30') as api_result:
+                async with session.get('https://odre.opendatasoft.com/api/records/1.0/search/?dataset=signal-ecogaz&q=&facet=gas_day&sort=gas_day&rows=5') as api_result:
 
                     _LOGGER.debug(f"data received, status code: {api_result.status}")
                     if api_result.status != 200:
