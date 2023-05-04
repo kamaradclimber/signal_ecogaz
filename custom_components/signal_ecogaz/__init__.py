@@ -35,7 +35,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
     # will make sure async_setup_entry from sensor.py is called
-    hass.config_entries.async_setup_platforms(entry, [Platform.SENSOR])
+    await hass.config_entries.async_forward_entry_setups(entry, [Platform.SENSOR])
 
     # subscribe to config updates
     entry.async_on_unload(entry.add_update_listener(update_entry))
