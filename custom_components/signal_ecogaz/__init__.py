@@ -135,7 +135,7 @@ class RestorableCoordinatedSensor(RestoreSensor):
                 self._attr_native_unit_of_measurement = extra_stored_data.native_unit_of_measurement
                 # sadly it seems as of 2023.6 we don't have any way to get back the additional attributes
                 self.coordinator.last_update_success = True
-          else:
+            else:
                 # by not restoring state, we allow the Coordinator to fetch data again and fill
                 # data as soon as possible
                 _LOGGER.debug(f"Stored state was 'unknown', starting from scratch")
