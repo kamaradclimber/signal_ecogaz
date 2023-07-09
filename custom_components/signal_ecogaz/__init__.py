@@ -124,13 +124,21 @@ class RestorableCoordinatedSensor(RestoreSensor):
     async def async_added_to_hass(self):
         await super().async_added_to_hass()
         _LOGGER.debug("starting to restore sensor from previous data")
-        if (last_stored_state := await self._async_get_restored_data()) is not None:
-            old_state = last_stored_state.state.as_dict()
-            _LOGGER.debug(f"restored state: {old_state}")
-            self._state = old_state["state"]
-            for key, value in old_state["attributes"].items():
-                self._attr_extra_state_attributes[key] = value
-            self.coordinator.last_update_success = True
+        
+        if (extra_stored_data := await self.async_get_last_sensor_data()) is not None:
+            if (
+                extra_stored_data.native_value != "unknown"
+                or self.restore_even_if_unknown()
+            ):
+                _LOGGER.debug(f"Restoring state for {self.unique_id}")
+                self._attr_native_value = extra_stored_data.native_value
+                self._attr_native_unit_of_measurement = extra_stored_data.native_unit_of_measurement
+                # sadly it seems as of 2023.6 we don't have any way to get back the additional attributes
+                self.coordinator.last_update_success = True
+          else:
+                # by not restoring state, we allow the Coordinator to fetch data again and fill
+                # data as soon as possible
+                _LOGGER.debug(f"Stored state was 'unknown', starting from scratch")
         # signal restoration happened
         self._restored = True
 
