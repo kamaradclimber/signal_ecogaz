@@ -163,6 +163,8 @@ class EcogazLevel(CoordinatorEntity, RestorableCoordinatedSensor):
         self._state = None
         self.shift = shift
         self.happening_now = False
+        # prevision in the past might not be available yet
+        self.swallow_errors = shift > 2
 
     def _timezone(self):
         timezone = self.hass.config.as_dict()["time_zone"]
@@ -173,7 +175,13 @@ class EcogazLevel(CoordinatorEntity, RestorableCoordinatedSensor):
         if not self.coordinator.last_update_success:
             _LOGGER.debug("Last coordinator failed, assuming state has not changed")
             return
-        ecogaz_level = self._find_ecogaz_level()
+        try:
+            ecogaz_level = self._find_ecogaz_level()
+        except UnknownDayError:
+            if self.swallow_errors:
+                ecogaz_level = None
+            else:
+                raise
         previous_level = self._attr_extra_state_attributes.get("indice_de_couleur", None)
         self._attr_extra_state_attributes["indice_de_couleur"] = ecogaz_level
         self._state = self._level2string(ecogaz_level)
@@ -190,6 +198,7 @@ class EcogazLevel(CoordinatorEntity, RestorableCoordinatedSensor):
             2: "Consommation élevée",
             3: "Situation tendue",
             4: "Situation très tendue",
+            None: "Unknown",
         }[level]
 
     def _level2icon(self, level):
@@ -198,6 +207,7 @@ class EcogazLevel(CoordinatorEntity, RestorableCoordinatedSensor):
             2: "mdi:alert",
             3: "mdi:power-plug-off",
             4: "mdi:power-plug-off",
+            None: "mdi:progress-question",
         }[level]
 
     @property
@@ -228,6 +238,9 @@ class EcogazLevel(CoordinatorEntity, RestorableCoordinatedSensor):
             self._attr_extra_state_attributes["timestamp"] = ecogaz_data["record_timestamp"]
             return int(ecogaz_data["fields"]["indice_de_couleur"])
         except StopIteration:
-            raise RuntimeError(
+            raise UnknownDayError(
                 f"Unable to find ecogaz level for {relevant_date.date()}"
             )
+
+class UnknownDayError(RuntimeError):
+    pass
