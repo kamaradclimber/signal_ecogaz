@@ -165,6 +165,14 @@ class EcogazLevel(CoordinatorEntity, RestorableCoordinatedSensor):
         self.happening_now = False
         # prevision in the past might not be available yet
         self.swallow_errors = shift > 2
+        self.options = {
+                1: "Situation normale",
+                2: "Consommation élevée",
+                3: "Situation tendue",
+                4: "Situation très tendue",
+                None: "Unknown",
+                }
+        self._attr_extra_state_attributes["options"] = list(self.options.values())
 
     def _timezone(self):
         timezone = self.hass.config.as_dict()["time_zone"]
@@ -190,16 +198,11 @@ class EcogazLevel(CoordinatorEntity, RestorableCoordinatedSensor):
             _LOGGER.info(f"updated '{self.name}' with level {self._state}")
         self.async_write_ha_state()
 
+
     def _level2string(self, level):
         if self.happening_now and level == 4:
             return "Coupure de gaz possible"
-        return {
-            1: "Situation normale",
-            2: "Consommation élevée",
-            3: "Situation tendue",
-            4: "Situation très tendue",
-            None: "Unknown",
-        }[level]
+        return self.options[level]
 
     def _level2icon(self, level):
         return {
