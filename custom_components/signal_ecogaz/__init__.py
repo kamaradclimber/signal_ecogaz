@@ -17,6 +17,7 @@ from homeassistant.helpers.update_coordinator import (
     UpdateFailed,
 )
 from homeassistant.components.sensor import RestoreSensor
+from homeassistant.util import dt as dt_util
 
 from .const import (
     DOMAIN,
@@ -175,8 +176,7 @@ class EcogazLevel(CoordinatorEntity, RestorableCoordinatedSensor):
         self._attr_extra_state_attributes["options"] = list(self.options.values())
 
     def _timezone(self):
-        timezone = self.hass.config.as_dict()["time_zone"]
-        return tz.gettz(timezone)
+        return dt_util.get_default_time_zone()
 
     @callback
     def _handle_coordinator_update(self) -> None:
