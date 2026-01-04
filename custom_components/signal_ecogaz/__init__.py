@@ -94,6 +94,7 @@ class EcoGazAPICoordinator(DataUpdateCoordinator):
                 )
             _LOGGER.debug("Starting collecting data")
             async with aiohttp.ClientSession() as session:
+                # Fetch from primary API
                 async with session.get('https://odre.opendatasoft.com/api/records/1.0/search/?dataset=signal-ecogaz&q=&facet=gas_day&sort=gas_day&rows=30') as api_result:
 
                     _LOGGER.debug(f"data received, status code: {api_result.status}")
@@ -103,18 +104,103 @@ class EcoGazAPICoordinator(DataUpdateCoordinator):
                                 )
 
                     response = await api_result.json()
-            _LOGGER.debug(f"api response body: {response}")
-            signals = response['records']
-            for day_data in signals:
-                parsed_date = datetime.strptime(
-                    day_data["fields"]["gas_day"], "%Y-%m-%d"
-                ).date()
-                day_data["fields"]["date"] = parsed_date
+                _LOGGER.debug(f"api response body: {response}")
+                signals = response['records']
+                for day_data in signals:
+                    parsed_date = datetime.strptime(
+                        day_data["fields"]["gas_day"], "%Y-%m-%d"
+                    ).date()
+                    day_data["fields"]["date"] = parsed_date
+
+                # Fetch from fallback API to fill in missing dates
+                try:
+                    fallback_data = await self._fetch_fallback_api(session)
+                    signals = self._merge_api_data(signals, fallback_data)
+                except Exception as err:
+                    _LOGGER.warning(f"Failed to fetch fallback API data: {err}")
 
             _LOGGER.debug(f"data parsed: {signals}")
             return signals
         except Exception as err:
             raise UpdateFailed(f"Error communicating with API: {err}")
+
+    async def _fetch_fallback_api(self, session: aiohttp.ClientSession):
+        """Fetch data from the fallback myecogaz.com API."""
+        # Calculate date range: 30 days back to 30 days forward
+        now = datetime.now(tz.UTC)
+        start_date = now - timedelta(days=30)
+        end_date = now + timedelta(days=30)
+
+        # Convert to Unix timestamps
+        start_timestamp = int(start_date.timestamp())
+        end_timestamp = int(end_date.timestamp())
+
+        url = f'https://myecogaz.com/api/ecogaz/get-ecogaz-data/?startDate={start_timestamp}&endDate={end_timestamp}'
+        headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:146.0) Gecko/20100101 Firefox/146.0'}
+
+        async with session.get(url, headers=headers) as api_result:
+            _LOGGER.debug(f"fallback API data received, status code: {api_result.status}")
+            if api_result.status != 200:
+                raise UpdateFailed(
+                    f"Error communicating with fallback API: status code was {api_result.status}"
+                )
+
+            # The API returns text/plain but contains JSON, so parse manually
+            response_text = await api_result.text()
+            response = json.loads(response_text)
+            _LOGGER.debug(f"fallback API response body: {response}")
+            return self._convert_fallback_format(response)
+
+    def _convert_fallback_format(self, fallback_response):
+        """Convert myecogaz.com API format to the expected format."""
+        color_to_index = {
+            'Green': 1,
+            'Yellow': 2,
+            'Orange': 3,
+            'Red': 4,
+        }
+
+        converted_records = []
+        for item in fallback_response.get('Items', []):
+            # Convert Unix timestamp to date
+            gas_day_timestamp = int(item['GasDay'])
+            gas_day_date = datetime.fromtimestamp(gas_day_timestamp, tz=tz.UTC).date()
+            gas_day_str = gas_day_date.strftime('%Y-%m-%d')
+
+            # Convert color to index
+            criticality = item['GasCriticality']
+            indice = color_to_index.get(criticality)
+
+            if indice is None:
+                _LOGGER.warning(f"Unknown criticality color: {criticality}, skipping")
+                continue
+
+            # Create record in the same format as the primary API
+            record = {
+                'fields': {
+                    'gas_day': gas_day_str,
+                    'date': gas_day_date,
+                    'indice_de_couleur': indice,
+                },
+                'record_timestamp': datetime.fromtimestamp(gas_day_timestamp, tz=tz.UTC).isoformat(),
+            }
+            converted_records.append(record)
+
+        return converted_records
+
+    def _merge_api_data(self, primary_data, fallback_data):
+        """Merge primary and fallback API data, preferring primary data."""
+        # Create a dict of dates from primary data
+        primary_dates = {record['fields']['date']: record for record in primary_data}
+
+        # Add fallback data for dates not in primary data
+        for fallback_record in fallback_data:
+            fallback_date = fallback_record['fields']['date']
+            if fallback_date not in primary_dates:
+                _LOGGER.info(f"Using fallback data for missing date: {fallback_date}")
+                primary_data.append(fallback_record)
+
+        return primary_data
 
 
 class RestorableCoordinatedSensor(RestoreSensor):
