@@ -1,5 +1,10 @@
 {
-  "codeowners": ["@kamaradclimber"],
+  "codeowners": [
+    "@kamaradclimber"
+  ],
+  "categories": [
+    "energy"
+  ],
   "requirements": [
     "Async-OAuthlib==0.0.9"
   ],
@@ -7,9 +12,8 @@
   "domain": "signal_ecogaz",
   "documentation": "https://github.com/kamaradclimber/signal-ecogaz",
   "issue_tracker": "https://github.com/kamaradclimber/signal-ecogaz/issues",
-  "codeowners": ["@kamaradclimber"],
   "integration_type": "device",
   "name": "Signal Ecogaz",
   "config_flow": true,
-  "version": "0.2.7"
+  "version": "0.2.9"
 }
