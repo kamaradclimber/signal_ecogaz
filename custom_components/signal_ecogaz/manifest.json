@@ -15,5 +15,5 @@
   "integration_type": "device",
   "name": "Signal Ecogaz",
   "config_flow": true,
-  "version": "0.2.9"
+  "version": "0.2.10"
 }
